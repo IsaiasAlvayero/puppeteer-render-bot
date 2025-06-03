@@ -11,7 +11,8 @@ app.get('/', async (req, res) => {
   console.log('🌐 Incoming request — launching Puppeteer');
 
   const browser = await puppeteer.launch({
-    headless: 'new', // modern headless mode
+    executablePath: '/usr/bin/chromium',
+    headless: 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -22,7 +23,7 @@ app.get('/', async (req, res) => {
 
   const page = await browser.newPage();
 
-  // Load saved cookies if available
+  // Try loading existing cookies
   try {
     const cookies = JSON.parse(await fs.readFile(COOKIE_PATH));
     await page.setCookie(...cookies);
@@ -31,28 +32,24 @@ app.get('/', async (req, res) => {
     console.log('⚠️ No cookies found. Starting fresh login...');
   }
 
-  // Navigate to InVideo AI
+  // Navigate to InVideo
   await page.goto('https://ai.invideo.io', { waitUntil: 'networkidle2' });
 
-  // Check if already logged in
+  // Check login status
   const currentURL = page.url();
   if (currentURL.includes('dashboard')) {
-    console.log('✅ Already logged in — continuing...');
+    console.log('✅ Already logged in');
   } else {
-    console.log('🕒 Waiting for manual Google login (30 seconds)...');
-    await page.waitForTimeout(30000); // Allow time for manual login
+    console.log('🕒 Waiting for manual login...');
+    await page.waitForTimeout(30000); // give you time to login manually
 
-    // Save cookies for future use
     const cookies = await page.cookies();
     await fs.writeFile(COOKIE_PATH, JSON.stringify(cookies, null, 2));
     console.log('✅ Cookies saved for future sessions.');
   }
 
-  // Placeholder for automation steps
-  console.log('🚧 Login flow complete. Ready to automate video creation...');
-
   await browser.close();
-  res.send('✅ Puppeteer session complete. Check Railway logs for status.');
+  res.send('✅ Puppeteer login sequence complete. Check Railway logs.');
 });
 
 app.listen(PORT, () => {
